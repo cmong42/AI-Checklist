@@ -10,3 +10,5 @@ npm run
 ```
 python3 app.py
 ```
+
+Then, navigate to https://localhost:4200 and you should see your application pull up!
