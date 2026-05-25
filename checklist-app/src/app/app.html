@@ -1,0 +1,154 @@
+<div class="container">
+  <h1>Checklist</h1>
+
+  <div class="add-bar">
+    <input
+      #input
+      [ngModel]="newItem()"
+      (ngModelChange)="newItem.set($event)"
+      (keydown.enter)="addItem()"
+      placeholder="Add a new item..."
+    />
+    <button (click)="addItem()">Add</button>
+  </div>
+
+  <h2>To Do ({{ activeItems().length }})</h2>
+  <ul class="items">
+    @for (item of activeItems(); track item.id) {
+      <li class="item">
+        <div class="item-row">
+          <span class="checkbox" (click)="toggleItem(item.id)"></span>
+          @if (editingId() === item.id) {
+            <input
+              class="edit-input"
+              [ngModel]="editText()"
+              (ngModelChange)="editText.set($event)"
+              (keydown.enter)="saveEdit()"
+              (keydown.escape)="cancelEdit()"
+              (blur)="saveEdit()"
+              autofocus
+            />
+          } @else {
+            <span class="label" (click)="startEdit(item)">{{ item.title }}</span>
+          }
+          @if (item.steps && item.steps.length > 0 && !editingId()) {
+            <span class="toggle-steps" (click)="toggleSteps(item.id)">
+              {{ expandedSteps().has(item.id) ? '▼' : '▶' }}
+            </span>
+          }
+          <div class="menu-wrapper" (click)="$event.stopPropagation()">
+            <button class="dots" (click)="menuId.set(menuId() === item.id ? null : item.id)">&#8942;</button>
+            @if (menuId() === item.id) {
+              <div class="dropdown">
+                <button (click)="aiAssistant(item); menuId.set(null)">AI Assistant</button>
+                <div class="divider"></div>
+                <button (click)="startEdit(item); menuId.set(null)">Rename</button>
+                <button class="danger" (click)="removeItem(item.id); menuId.set(null)">Delete</button>
+              </div>
+            }
+          </div>
+        </div>
+        @if (item.steps && item.steps.length > 0 && expandedSteps().has(item.id)) {
+          <ul class="item-steps">
+            @for (step of item.steps; track $index) {
+              <li>{{ step }}</li>
+            }
+          </ul>
+        }
+      </li>
+    } @empty {
+      <li class="empty">Nothing to do — add something above!</li>
+    }
+  </ul>
+
+  <div class="completed-header" (click)="showCompleted.set(!showCompleted())">
+    <span>Completed ({{ completedItems().length }})</span>
+    <span class="chevron" [class.open]="showCompleted()">&#9654;</span>
+  </div>
+
+  @if (showCompleted()) {
+    <ul class="items">
+      @for (item of completedItems(); track item.id) {
+        <li class="item done">
+          <div class="item-row">
+            <span class="checkbox checked" (click)="toggleItem(item.id)">&#10003;</span>
+            @if (editingId() === item.id) {
+              <input
+                class="edit-input"
+                [ngModel]="editText()"
+                (ngModelChange)="editText.set($event)"
+                (keydown.enter)="saveEdit()"
+                (keydown.escape)="cancelEdit()"
+                (blur)="saveEdit()"
+                autofocus
+              />
+            } @else {
+              <span class="label strikethrough" (click)="startEdit(item)">{{ item.title }}</span>
+            }
+            @if (item.steps && item.steps.length > 0 && !editingId()) {
+              <span class="toggle-steps" (click)="toggleSteps(item.id)">
+                {{ expandedSteps().has(item.id) ? '▼' : '▶' }}
+              </span>
+            }
+            <div class="menu-wrapper" (click)="$event.stopPropagation()">
+              <button class="dots" (click)="menuId.set(menuId() === item.id ? null : item.id)">&#8942;</button>
+              @if (menuId() === item.id) {
+                <div class="dropdown">
+                  <button (click)="aiAssistant(item); menuId.set(null)">AI Assistant</button>
+                  <div class="divider"></div>
+                  <button (click)="startEdit(item); menuId.set(null)">Rename</button>
+                  <button class="danger" (click)="removeItem(item.id); menuId.set(null)">Delete</button>
+                </div>
+              }
+            </div>
+          </div>
+          @if (item.steps && item.steps.length > 0 && expandedSteps().has(item.id)) {
+            <ul class="item-steps">
+              @for (step of item.steps; track $index) {
+                <li>{{ step }}</li>
+              }
+            </ul>
+          }
+        </li>
+      } @empty {
+        <li class="empty">No completed items yet.</li>
+      }
+    </ul>
+  }
+</div>
+
+@if (aiResults().length > 0 || aiLoading()) {
+  <div class="ai-overlay" (click)="closeAiPanel()">
+    <div class="ai-modal" (click)="$event.stopPropagation()">
+      <div class="ai-modal-header">
+        <span>AI Assistant — {{ aiTask() }}</span>
+        <button class="ai-close" (click)="closeAiPanel()">&#10005;</button>
+      </div>
+      <div class="ai-modal-body">
+        @if (aiLoading()) {
+          <div class="ai-loading">Running agent…</div>
+        }
+        @for (item of aiResults(); track item.agent) {
+          <div class="ai-result">
+            @if (item.error) {
+              <div class="ai-error">Error: {{ item.error }}</div>
+            } @else if (item.steps && item.steps.length > 0) {
+              <ul class="ai-steps">
+                @for (step of item.steps; track $index) {
+                  <li>{{ step }}</li>
+                }
+              </ul>
+            } @else {
+              <pre class="ai-output">{{ item.result }}</pre>
+            }
+          </div>
+        }
+      </div>
+      @if (!aiLoading() && aiResults()[0]?.steps?.length) {
+        <div class="ai-modal-footer">
+          <button class="btn-save" (click)="saveAiSteps()">Save to task</button>
+        </div>
+      }
+    </div>
+  </div>
+}
