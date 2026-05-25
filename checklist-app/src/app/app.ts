@@ -1,5 +1,6 @@
-import { Component, signal, computed, HostListener } from '@angular/core';
+import { Component, signal, computed, HostListener, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ApiService } from './api.service';
 
 interface Item {
   id: number;
@@ -32,6 +33,8 @@ export class App {
   menuId = signal<number | null>(null);
   expandedSteps = signal<Set<number>>(new Set());
   private nextId = 2;
+
+  private apiService = inject(ApiService);
 
   aiResults = signal<AgentResult[]>([]);
   aiLoading = signal(false);
@@ -112,15 +115,6 @@ export class App {
     return undefined;
   }
 
-  private async parseJsonSafe(r: Response): Promise<Record<string, unknown>> {
-    const text = await r.text();
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { error: `Server returned non-JSON (HTTP ${r.status}): ${text.slice(0, 200)}` };
-    }
-  }
-
   saveAiSteps() {
     const id = this.aiItemId();
     const steps = this.aiResults()[0]?.steps;
@@ -138,19 +132,10 @@ export class App {
     this.aiResults.set([]);
 
     try {
-      const skillResp = await fetch('/api/skill');
-      if (!skillResp.ok) {
-        throw new Error(`Failed to load SKILL.md (HTTP ${skillResp.status})`);
-      }
-      const skillText = await skillResp.text();
+      const skillText = await this.apiService.getSkill();
       const prompt = skillText.replace('<INSERT_TASK_HERE>', item.title);
 
-      const llResp = await fetch('/api/low-level-coding-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, max_tokens: 512 }),
-      });
-      const llData = await this.parseJsonSafe(llResp);
+      const llData = await this.apiService.runAgent(prompt, 512);
       const llResult = (llData['result'] as string) ?? (llData['error'] as string) ?? '';
       const steps = this.parseSteps(llResult);
 
