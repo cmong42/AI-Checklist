@@ -5,5 +5,14 @@
       "FORCE_CMAKE": "1",
       "VERCEL": "1"
     }
-  }
+  },
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python",
+      "config": {
+        "installCommand": "CMAKE_ARGS=\"-DLLAMA_NO_OPENMP=1\" FORCE_CMAKE=1 pip install --upgrade --force-reinstall --no-cache-dir --no-binary llama-cpp-python -r requirements.txt"
+      }
+    }
+  ]
 }
