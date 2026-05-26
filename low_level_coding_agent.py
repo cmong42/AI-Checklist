@@ -1,27 +1,62 @@
-"""
-Low-Level Language Coding Agent (Fortran, Assembly, LLVM-IR)
-============================================================
-Uses FortranCodeGen-3B-SynthData - a Qwen 2.5 Coder 3B model
-fine-tuned for Fortran90 and low-level code generation.
-"""
-
 from llama_cpp import Llama
 import os
 import sys
 
-MODEL_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "models",
+HF_MODEL_REPO = os.environ.get(
+    "HF_MODEL_REPO",
+    "amelia-the-fox/FortranCodeGen-3B-SunthData-GGUF",
+)
+HF_MODEL_FILE = os.environ.get(
+    "HF_MODEL_FILE",
     "FortranCodeGen-3B-SynthData.Q4_K_M.gguf",
 )
 
+LOCAL_DIR = os.path.join(os.path.dirname(__file__), "models")
+VERCEL_MODEL_DIR = "/tmp/models"
+
+MODEL_PATH = os.path.join(LOCAL_DIR, HF_MODEL_FILE)
+
+
+def _resolve_model_path() -> str:
+    if os.path.exists(MODEL_PATH):
+        return MODEL_PATH
+
+    vercel_path = os.path.join(VERCEL_MODEL_DIR, HF_MODEL_FILE)
+    if os.path.exists(vercel_path):
+        return vercel_path
+
+    if os.environ.get("VERCEL") == "1":
+        os.makedirs(VERCEL_MODEL_DIR, exist_ok=True)
+        return _download_model(VERCEL_MODEL_DIR)
+    return MODEL_PATH
+
+
+def _download_model(download_dir: str) -> str:
+    try:
+        from huggingface_hub import hf_hub_download
+    except ImportError:
+        raise ImportError(
+            "Missing huggingface_hub. Install it with: pip install huggingface_hub"
+        )
+
+    downloaded_path = hf_hub_download(
+        repo_id=HF_MODEL_REPO,
+        filename=HF_MODEL_FILE,
+        local_dir=download_dir,
+        local_dir_use_symlinks=False,
+    )
+    return downloaded_path
+
 
 class LowLevelCodingAgent:
-    def __init__(self, model_path: str = MODEL_PATH):
+    def __init__(self, model_path: str = None):
+        model_path = model_path or _resolve_model_path()
         if not os.path.exists(model_path):
             raise FileNotFoundError(
                 f"Model not found at {model_path}. "
-                "Run download_model.py first."
+                "Upload the GGUF file to Hugging Face and set "
+                "HF_MODEL_REPO and HF_MODEL_FILE env vars, "
+                "or run download_model.py locally first."
             )
         self.llm = Llama(
             model_path=model_path,

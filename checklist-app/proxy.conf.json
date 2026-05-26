@@ -1,6 +1,6 @@
 {
   "/api": {
-    "target": "https://ai-checklist-two.vercel.app",
+    "target": "https://ai-checklist-nine.vercel.app",
     "secure": false,
     "changeOrigin": true
   }

@@ -1,0 +1,9 @@
+{
+  "build": {
+    "env": {
+      "CMAKE_ARGS": "-DLLAMA_NO_OPENMP=1",
+      "FORCE_CMAKE": "1",
+      "VERCEL": "1"
+    }
+  }
+}
