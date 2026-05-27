@@ -1,6 +1,10 @@
-from llama_cpp import Llama
 import os
 import sys
+
+try:
+    from llama_cpp import Llama
+except (OSError, RuntimeError) as _:
+    Llama = None
 
 HF_MODEL_REPO = os.environ.get(
     "HF_MODEL_REPO",
@@ -50,6 +54,9 @@ def _download_model(download_dir: str) -> str:
 
 class LowLevelCodingAgent:
     def __init__(self, model_path: str = None):
+        if Llama is None:
+            self.llm = None
+            return
         model_path = model_path or _resolve_model_path()
         if not os.path.exists(model_path):
             raise FileNotFoundError(
@@ -58,24 +65,20 @@ class LowLevelCodingAgent:
                 "HF_MODEL_REPO and HF_MODEL_FILE env vars, "
                 "or run download_model.py locally first."
             )
-        try:
-            self.llm = Llama(
-                model_path=model_path,
-                n_ctx=4096,
-                n_threads=4,
-                n_gpu_layers=0,
-                verbose=False,
-            )
-        except (OSError, RuntimeError) as e:
-            self.llm = None
-            self._load_error = str(e)
+        self.llm = Llama(
+            model_path=model_path,
+            n_ctx=4096,
+            n_threads=4,
+            n_gpu_layers=0,
+            verbose=False,
+        )
 
     def generate(self, prompt: str, max_tokens: int = 512) -> str:
         if self.llm is None:
             return (
-                "The AI model could not be loaded in this environment. "
-                f"Reason: {getattr(self, '_load_error', 'unknown error')}. "
-                "Run the backend locally with 'python3 app.py' for AI features."
+                "AI Assistant unavailable: the local LLM could not be loaded "
+                "in this environment. Run the backend locally with "
+                "'python3 app.py' for AI features."
             )
         output = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": prompt}],
