@@ -58,15 +58,25 @@ class LowLevelCodingAgent:
                 "HF_MODEL_REPO and HF_MODEL_FILE env vars, "
                 "or run download_model.py locally first."
             )
-        self.llm = Llama(
-            model_path=model_path,
-            n_ctx=4096,
-            n_threads=4,
-            n_gpu_layers=0,
-            verbose=False,
-        )
+        try:
+            self.llm = Llama(
+                model_path=model_path,
+                n_ctx=4096,
+                n_threads=4,
+                n_gpu_layers=0,
+                verbose=False,
+            )
+        except (OSError, RuntimeError) as e:
+            self.llm = None
+            self._load_error = str(e)
 
     def generate(self, prompt: str, max_tokens: int = 512) -> str:
+        if self.llm is None:
+            return (
+                "The AI model could not be loaded in this environment. "
+                f"Reason: {getattr(self, '_load_error', 'unknown error')}. "
+                "Run the backend locally with 'python3 app.py' for AI features."
+            )
         output = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
